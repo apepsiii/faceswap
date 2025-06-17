@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Face Swap Studio - Ambil Foto</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            text-align: center;
+            font-family: sans-serif;
+            background: linear-gradient(150deg, #0a1f44, #ff1493);
+            padding: 20px;
+            margin: 0;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #00ffcc, #0099ff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0, 255, 204, 0.3);
+        }
+
+        .logo i {
+            font-size: 1.5rem;
+            color: #0a1f44;
+        }
+
+        h3 {
+            margin-bottom: 10px;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .selected-character {
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            border-radius: 15px;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 30px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        #video {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            display: block;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 3px solid rgba(0, 255, 204, 0.6);
+            border-radius: 20px;
+            pointer-events: none;
+        }
+
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        .countdown-number {
+            font-size: 8rem;
+            font-weight: 900;
+            color: #00ffcc;
+            text-shadow: 0 0 30px rgba(0, 255, 204, 0.8);
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        .countdown-text {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            color: #fff;
+            text-align: center;
+        }
+
+        .countdown-overlay.hidden {
+            display: none;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .camera-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .camera-btn.switch {
+            background: rgba(255, 255, 255, 0.9);
+            color: #0a1f44;
+            font-size: 1.2rem;
+        }
+
+        .camera-btn.capture {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(45deg, #00ffcc, #0099ff);
+            color: #0a1f44;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 255, 204, 0.4);
+        }
+
+        .camera-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .camera-btn:active {
+            transform: scale(0.95);
+        }
+
+        .preview-container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            display: none;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px 10px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #00ffcc, #0099ff);
+            color: #0a1f44;
+            box-shadow: 0 8px 25px rgba(0, 255, 204, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 255, 204, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(45deg, #00ffcc, #0099ff);
+            color: #0a1f44;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 255, 204, 0.4);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .alert.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            color: #ff6b6b;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #00ffcc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 768px) {
+            .back-button {
+                position: relative;
+                top: auto;
+                left: auto;
+                margin-bottom: 20px;
+            }
+            
+            .camera-container {
+                max-width: 100%;
+            }
+            
+            #video {
+                height: 300px;
+            }
+            
+            h3 {
+                font-size: 1.5rem;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <a href="/character" class="back-button">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </a>
+        
+        <div class="logo">
+            <i class="fas fa-camera"></i>
+        </div>
+        
+        <h3>Ambil Foto Otomatis</h3>
+        <p class="subtitle">Posisikan wajah, klik siap, dan tunggu countdown</p>
+        
+        <div class="selected-character" id="selectedCharacter">
+            Template: <span id="characterName"></span>
+        </div>
+        
+        <div class="alert error" id="cameraError"></div>
+        <div class="loading" id="cameraLoading">
+            <div class="spinner"></div>
+            <p>Mengakses kamera...</p>
+        </div>
+        
+        <div class="camera-container" id="cameraContainer">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div class="camera-overlay"></div>
+            <div class="face-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 250px; border: 2px dashed rgba(0, 255, 204, 0.7); border-radius: 50%; pointer-events: none;"></div>
+            
+            <!-- Countdown Overlay -->
+            <div class="countdown-overlay hidden" id="countdownOverlay">
+                <div class="countdown-number" id="countdownNumber">5</div>
+                <div class="countdown-text">
+                    Bersiap untuk mengambil foto...<br>
+                    Posisikan wajah dengan baik
+                </div>
+            </div>
+            
+            <div class="camera-controls">
+                <button class="camera-btn switch" id="switchCamera" title="Ganti Kamera">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="camera-btn capture" id="readyBtn" title="Siap Foto">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="preview-container" id="previewContainer">
+            <img id="previewImage" class="preview-image" alt="Preview">
+            
+            <div>
+                <button class="btn btn-primary" id="generateBtn">
+                    <i class="fas fa-magic"></i> Generate Ulang
+                </button>
+                <button class="btn btn-secondary" id="retakeBtn">
+                    <i class="fas fa-redo"></i> Foto Ulang
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let videoStream = null;
+        let currentCamera = 'user'; // 'user' for front, 'environment' for back
+        let capturedImage = null;
+        let selectedCharacter = null;
+        let countdownTimer = null;
+        let isCountingDown = false;
+        
+        // Check authentication and character selection
+        const token = localStorage.getItem('token');
+        const characterData = localStorage.getItem('selectedCharacter');
+        
+        if (!token) {
+            window.location.replace('/login');
+        }
+        
+        if (!characterData) {
+            window.location.replace('/character');
+        }
+        
+        selectedCharacter = JSON.parse(characterData);
+        
+        // Display selected character
+        document.getElementById('characterName').textContent = selectedCharacter.displayName;
+
+        // Initialize camera on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCamera();
+        });
+
+        async function initializeCamera() {
+            const loading = document.getElementById('cameraLoading');
+            const errorAlert = document.getElementById('cameraError');
+            const video = document.getElementById('video');
+            
+            loading.style.display = 'block';
+            errorAlert.style.display = 'none';
+            
+            try {
+                // Request camera permission
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: currentCamera,
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                
+                video.srcObject = videoStream;
+                
+                video.onloadedmetadata = () => {
+                    loading.style.display = 'none';
+                };
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Tidak dapat mengakses kamera. Pastikan browser memiliki izin kamera.');
+                console.error('Camera error:', error);
+            }
+        }
+
+        // Switch camera
+        document.getElementById('switchCamera').addEventListener('click', async function() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            
+            currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+            await initializeCamera();
+        });
+
+        // Ready button (starts countdown)
+        document.getElementById('readyBtn').addEventListener('click', function() {
+            if (isCountingDown) return;
+            
+            startCountdown();
+        });
+
+        function startCountdown() {
+            if (isCountingDown) return;
+            
+            isCountingDown = true;
+            let count = 5;
+            
+            const countdownOverlay = document.getElementById('countdownOverlay');
+            const countdownNumber = document.getElementById('countdownNumber');
+            const readyBtn = document.getElementById('readyBtn');
+            
+            // Show countdown overlay
+            countdownOverlay.classList.remove('hidden');
+            readyBtn.disabled = true;
+            readyBtn.innerHTML = '<i class="fas fa-hourglass-half"></i>';
+            
+            countdownTimer = setInterval(() => {
+                countdownNumber.textContent = count;
+                countdownNumber.style.animation = 'none';
+                setTimeout(() => {
+                    countdownNumber.style.animation = 'pulse 1s ease-in-out';
+                }, 10);
+                
+                count--;
+                
+                if (count < 0) {
+                    clearInterval(countdownTimer);
+                    countdownOverlay.classList.add('hidden');
+                    
+                    // Auto capture photo
+                    setTimeout(() => {
+                        capturePhoto();
+                    }, 200);
+                }
+            }, 1000);
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob
+            canvas.toBlob(blob => {
+                capturedImage = blob;
+                
+                // Stop video stream
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Auto generate face swap
+                autoGenerateFaceSwap();
+            }, 'image/jpeg', 0.9);
+        }
+
+        async function autoGenerateFaceSwap() {
+            if (!capturedImage || !selectedCharacter) {
+                showError('Foto dan karakter harus dipilih');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('cameraContainer').style.display = 'none';
+            
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.style.display = 'block';
+            loadingDiv.innerHTML = `
+                <div class="spinner"></div>
+                <p>Sedang memproses foto Anda...</p>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 10px;">
+                    Mohon tunggu 10-30 detik
+                </p>
+            `;
+            
+            document.querySelector('.page').insertBefore(loadingDiv, document.getElementById('previewContainer'));
+            
+            try {
+                const formData = new FormData();
+                formData.append('webcam', capturedImage, 'capture.jpg');
+                formData.append('template_name', selectedCharacter.name);
+                formData.append('apply_frame', 'true');
+                
+                const response = await fetch('/api/swap', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store result data
+                    localStorage.setItem('resultData', JSON.stringify(data.data));
+                    // Auto redirect to result page
+                    window.location.replace('/result');
+                } else {
+                    showError(data.detail || 'Generate gagal');
+                    resetCamera();
+                }
+            } catch (error) {
+                showError('Koneksi gagal. Silakan coba lagi.');
+                console.error('Generate error:', error);
+                resetCamera();
+            }
+        }
+
+        function resetCamera() {
+            isCountingDown = false;
+            const readyBtn = document.getElementById('readyBtn');
+            const countdownOverlay = document.getElementById('countdownOverlay');
+            
+            readyBtn.disabled = false;
+            readyBtn.innerHTML = '<i class="fas fa-camera"></i>';
+            countdownOverlay.classList.add('hidden');
+            
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+            
+            document.getElementById('cameraContainer').style.display = 'block';
+            
+            // Remove loading div if exists
+            const loadingDiv = document.querySelector('.loading');
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+            
+            // Restart camera
+            initializeCamera();
+        }
+
+        // Retake photo (now resets camera)
+        document.getElementById('retakeBtn').addEventListener('click', function() {
+            resetCamera();
+        });
+
+        // Manual generate (backup function)
+        document.getElementById('generateBtn').addEventListener('click', async function() {
+            if (!capturedImage || !selectedCharacter) {
+                showError('Foto dan karakter harus dipilih');
+                return;
+            }
+            
+            await autoGenerateFaceSwap();
+        });
+
+        function showError(message) {
+            const errorAlert = document.getElementById('cameraError');
+            errorAlert.textContent = message;
+            errorAlert.style.display = 'block';
+            
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Cleanup when leaving page
+        window.addEventListener('beforeunload', function() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

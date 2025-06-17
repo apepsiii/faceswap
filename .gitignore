@@ -1,0 +1,138 @@
+# AI Face Swap Studio - .gitignore
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Face Swap Models
+inswapper_128.onnx
+*.onnx
+models/
+
+# Database
+face_swap.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Upload & Result Files
+static/uploads/
+static/results/
+static/templates/
+uploads/
+results/
+temp/
+
+# Logs
+*.log
+logs/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+config.py
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Coverage & Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Distribution / Packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/
+
+# Large Media Files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+
+# Face Detection Cache
+.insightface/
+
+# Node.js (if using npm for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Secrets & Keys
+*.pem
+*.key
+*.crt
+*.p12
+secrets/

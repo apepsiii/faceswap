@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Face Swap Studio</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo i {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e1e5e9;
+        }
+
+        .btn-secondary:hover {
+            background: #e1e5e9;
+        }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .character-card {
+            border: 3px solid transparent;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .character-card:hover {
+            transform: scale(1.05);
+        }
+
+        .character-card.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .character-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .character-card .name {
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .camera-container {
+            position: relative;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #video {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+        }
+
+        .camera-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .camera-btn:hover {
+            background: #fff;
+            transform: scale(1.1);
+        }
+
+        .camera-btn.capture {
+            background: #ff4757;
+            color: white;
+        }
+
+        .preview-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .result-container {
+            text-align: center;
+        }
+
+        .result-image {
+            max-width: 100%;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .qr-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert.success {
+            background: #efe;
+            color: #363;
+            border: 1px solid #cfc;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #667eea;
+            cursor: pointer;
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 10px;
+            }
+            
+            .page {
+                padding: 20px;
+            }
+            
+            .character-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Login Page -->
+        <div id="loginPage" class="page active">
+            <div class="logo">
+                <i class="fas fa-magic"></i>
+                <h1>AI Face Swap Studio</h1>
+                <p>Transform yourself with AI magic</p>
+            </div>
+            
+            <div class="alert error" id="loginError"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                
+                <button type="button" class="btn btn-secondary" id="registerBtn">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+            </form>
+        </div>
+
+        <!-- Character Selection Page -->
+        <div id="characterPage" class="page">
+            <button class="back-btn" onclick="showPage('loginPage')">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div class="logo">
+                <i class="fas fa-users"></i>
+                <h1>Pilih Karakter</h1>
+                <p>Pilih template yang ingin kamu gunakan</p>
+            </div>
+            
+            <div class="alert error" id="characterError"></div>
+            
+            <div class="character-grid" id="characterGrid">
+                <!-- Characters will be loaded here -->
+            </div>
+            
+            <button class="btn btn-primary" id="selectCharacterBtn" disabled>
+                <i class="fas fa-camera"></i> Lanjut ke Kamera
+            </button>
+        </div>
+
+        <!-- Camera Page -->
+        <div id="cameraPage" class="page">
+            <button class="back-btn" onclick="showPage('characterPage')">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div class="logo">
+                <i class="fas fa-camera"></i>
+                <h1>Ambil Foto</h1>
+                <p>Posisikan wajah di tengah kamera</p>
+            </div>
+            
+            <div class="alert error" id="cameraError"></div>
+            
+            <div class="camera-container">
+                <video id="video" autoplay muted></video>
+                <canvas id="canvas"></canvas>
+                
+                <div class="camera-controls">
+                    <button class="camera-btn" id="switchCamera">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="camera-btn capture" id="captureBtn">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="preview-container" id="previewContainer" style="display: none;">
+                <img id="previewImage" class="preview-image" alt="Preview">
+                <br><br>
+                <button class="btn btn-primary" id="generateBtn">
+                    <i class="fas fa-magic"></i> Generate Face Swap
+                </button>
+                <button class="btn btn-secondary" id="retakeBtn">
+                    <i class="fas fa-redo"></i> Ambil Ulang
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Page -->
+        <div id="resultPage" class="page">
+            <button class="back-btn" onclick="showPage('cameraPage')">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div class="logo">
+                <i class="fas fa-check-circle"></i>
+                <h1>Hasil Generate</h1>
+                <p>Face swap berhasil dibuat!</p>
+            </div>
+            
+            <div class="loading" id="loadingContainer">
+                <div class="spinner"></div>
+                <p>Sedang memproses gambar...</p>
+            </div>
+            
+            <div class="result-container" id="resultContainer" style="display: none;">
+                <img id="resultImage" class="result-image" alt="Result">
+                
+                <div class="qr-container">
+                    <h3>Scan QR Code untuk Download</h3>
+                    <div id="qrcode"></div>
+                </div>
+                
+                <button class="btn btn-primary" id="downloadBtn">
+                    <i class="fas fa-download"></i> Download Langsung
+                </button>
+                
+                <button class="btn btn-secondary" onclick="showPage('characterPage')">
+                    <i class="fas fa-redo"></i> Buat Lagi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let selectedCharacter = null;
+        let capturedImage = null;
+        let videoStream = null;
+        let currentCamera = 'user'; // 'user' for front camera, 'environment' for back camera
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            loadCharacters();
+        }
+
+        function setupEventListeners() {
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('registerBtn').addEventListener('click', handleRegister);
+            
+            // Character selection
+            document.getElementById('selectCharacterBtn').addEventListener('click', () => {
+                if (selectedCharacter) {
+                    showPage('cameraPage');
+                    initializeCamera();
+                }
+            });
+            
+            // Camera controls
+            document.getElementById('switchCamera').addEventListener('click', switchCamera);
+            document.getElementById('captureBtn').addEventListener('click', capturePhoto);
+            document.getElementById('retakeBtn').addEventListener('click', retakePhoto);
+            document.getElementById('generateBtn').addEventListener('click', generateFaceSwap);
+            
+            // Download button
+            document.getElementById('downloadBtn').addEventListener('click', downloadResult);
+        }
+
+        // Authentication functions
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    showPage('characterPage');
+                    showAlert('success', 'Login berhasil!');
+                } else {
+                    showAlert('error', data.message || 'Login gagal', 'loginError');
+                }
+            } catch (error) {
+                showAlert('error', 'Koneksi gagal. Silakan coba lagi.', 'loginError');
+            }
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showAlert('error', 'Username dan password harus diisi', 'loginError');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', 'Registrasi berhasil! Silakan login.', 'loginError');
+                } else {
+                    showAlert('error', data.message || 'Registrasi gagal', 'loginError');
+                }
+            } catch (error) {
+                showAlert('error', 'Koneksi gagal. Silakan coba lagi.', 'loginError');
+            }
+        }
+
+        // Character selection functions
+        async function loadCharacters() {
+            try {
+                const response = await fetch('/api/templates');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayCharacters(data.templates);
+                } else {
+                    showAlert('error', 'Gagal memuat karakter', 'characterError');
+                }
+            } catch (error) {
+                showAlert('error', 'Koneksi gagal. Silakan coba lagi.', 'characterError');
+            }
+        }
+
+        function displayCharacters(templates) {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = '';
+            
+            templates.forEach(template => {
+                const card = document.createElement('div');
+                card.className = 'character-card';
+                card.onclick = () => selectCharacter(template, card);
+                
+                card.innerHTML = `
+                    <img src="${template.path}" alt="${template.name}">
+                    <div class="name">${template.name.replace(/\.[^/.]+$/, "")}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function selectCharacter(template, cardElement) {
+            // Remove previous selection
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Select new character
+            cardElement.classList.add('selected');
+            selectedCharacter = template;
+            document.getElementById('selectCharacterBtn').disabled = false;
+        }
+
+        // Camera functions
+        async function initializeCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentCamera }
+                });
+                
+                const video = document.getElementById('video');
+                video.srcObject = videoStream;
+            } catch (error) {
+                showAlert('error', 'Tidak dapat mengakses kamera', 'cameraError');
+            }
+        }
+
+        async function switchCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            
+            currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+            await initializeCamera();
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                capturedImage = blob;
+                const imageUrl = URL.createObjectURL(blob);
+                
+                document.getElementById('previewImage').src = imageUrl;
+                document.getElementById('previewContainer').style.display = 'block';
+                
+                // Hide video
+                document.querySelector('.camera-container').style.display = 'none';
+            }, 'image/jpeg', 0.9);
+        }
+
+        function retakePhoto() {
+            document.getElementById('previewContainer').style.display = 'none';
+            document.querySelector('.camera-container').style.display = 'block';
+            capturedImage = null;
+        }
+
+        // Face swap generation
+        async function generateFaceSwap() {
+            if (!capturedImage || !selectedCharacter) {
+                showAlert('error', 'Foto dan karakter harus dipilih');
+                return;
+            }
+            
+            showPage('resultPage');
+            document.getElementById('loadingContainer').classList.add('active');
+            
+            const formData = new FormData();
+            formData.append('webcam', capturedImage, 'capture.jpg');
+            formData.append('template_name', selectedCharacter.name);
+            formData.append('apply_frame', 'true');
+            
+            try {
+                const response = await fetch('/api/swap', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResult(data.data);
+                } else {
+                    showAlert('error', data.detail || 'Generate gagal');
+                    showPage('cameraPage');
+                }
+            } catch (error) {
+                showAlert('error', 'Koneksi gagal. Silakan coba lagi.');
+                showPage('cameraPage');
+            } finally {
+                document.getElementById('loadingContainer').classList.remove('active');
+            }
+        }
+
+        function displayResult(resultData) {
+            const resultImage = document.getElementById('resultImage');
+            resultImage.src = resultData.result_url;
+            
+            // Generate QR Code
+            generateQRCode(window.location.origin + resultData.result_url);
+            
+            document.getElementById('resultContainer').style.display = 'block';
+            
+            // Store result URL for download
+            document.getElementById('downloadBtn').onclick = () => {
+                downloadImage(resultData.result_url, resultData.result_filename);
+            };
+        }
+
+        function generateQRCode(url) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            QRCode.toCanvas(qrContainer, url, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#333333',
+                    light: '#ffffff'
+                }
+            }, function(error) {
+                if (error) console.error('QR Code generation failed:', error);
+            });
+        }
+
+        function downloadImage(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Utility functions
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            // Stop video stream when leaving camera page
+            if (pageId !== 'cameraPage' && videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        function showAlert(type, message, containerId = null) {
+            const alertClass = type === 'error' ? 'error' : 'success';
+            
+            if (containerId) {
+                const alertElement = document.getElementById(containerId);
+                alertElement.className = `alert ${alertClass}`;
+                alertElement.textContent = message;
+                alertElement.style.display = 'block';
+                
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 5000);
+            } else {
+                alert(message);
+            }
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
