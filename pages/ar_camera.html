@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Camera - AI Face Swap Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 480px;  /* Portrait 16:9 width */
+            height: 854px; /* Portrait 16:9 height */
+            max-width: 90vw;
+            max-height: 90vh;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+
+        .overlay-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .character-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .character-overlay.visible {
+            opacity: 0.8;
+        }
+
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 20;
+        }
+
+        .countdown-overlay.visible {
+            opacity: 1;
+        }
+
+        .countdown-number {
+            font-size: 8rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 20px rgba(255,255,255,0.8);
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .status-overlay {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 30;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .character-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            z-index: 30;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .character-info.visible {
+            opacity: 1;
+        }
+
+        .capture-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        .capture-flash.flash {
+            animation: flashEffect 0.3s ease-out;
+        }
+
+        @keyframes flashEffect {
+            0% { opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            color: white;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .loading-progress {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .error-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .retry-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .retry-btn:hover {
+            background: white;
+            color: #ff6b6b;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .camera-container {
+                width: 95vw;
+                height: calc(95vw * 16/9);
+                border-radius: 15px;
+            }
+
+            .countdown-number {
+                font-size: 6rem;
+            }
+
+            .status-overlay {
+                top: 20px;
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+
+            .character-info {
+                bottom: 20px;
+                padding: 8px 15px;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .countdown-number {
+                font-size: 4rem;
+            }
+
+            .loading-text {
+                font-size: 1.2rem;
+            }
+
+            .error-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Success animation */
+        .success-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            color: #4CAF50;
+            z-index: 30;
+            opacity: 0;
+            animation: successPop 1.5s ease-out;
+        }
+
+        @keyframes successPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Mempersiapkan AR Camera</div>
+        <div class="loading-progress" id="loadingProgress">Mengakses kamera...</div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="errorScreen" class="error-screen">
+        <div class="error-icon">📱</div>
+        <div class="error-title">Akses Kamera Diperlukan</div>
+        <div class="error-message" id="errorMessage">
+            Silakan izinkan akses kamera untuk menggunakan fitur AR Photo.
+        </div>
+        <button class="retry-btn" onclick="retryCamera()">Coba Lagi</button>
+    </div>
+
+    <!-- Main Camera Interface -->
+    <div class="camera-container" id="cameraContainer" style="display: none;">
+        <video id="videoElement" autoplay muted playsinline></video>
+        
+        <!-- Character overlay (webm video) -->
+        <video id="characterOverlay" class="character-overlay" autoplay muted loop playsinline></video>
+        
+        <!-- Countdown overlay -->
+        <div id="countdownOverlay" class="countdown-overlay">
+            <div id="countdownNumber" class="countdown-number">5</div>
+        </div>
+        
+        <!-- Status overlay -->
+        <div id="statusOverlay" class="status-overlay">
+            Memuat karakter AR...
+        </div>
+        
+        <!-- Character info -->
+        <div id="characterInfo" class="character-info">
+            <span id="characterName">Character Name</span>
+        </div>
+        
+        <!-- Capture flash effect -->
+        <div id="captureFlash" class="capture-flash"></div>
+    </div>
+
+    <!-- Canvas for capturing (hidden) -->
+    <canvas id="captureCanvas" style="display: none;"></canvas>
+
+    <script>
+        class ARCameraController {
+            constructor() {
+                this.videoElement = document.getElementById('videoElement');
+                this.characterOverlay = document.getElementById('characterOverlay');
+                this.countdownOverlay = document.getElementById('countdownOverlay');
+                this.countdownNumber = document.getElementById('countdownNumber');
+                this.statusOverlay = document.getElementById('statusOverlay');
+                this.characterInfo = document.getElementById('characterInfo');
+                this.characterName = document.getElementById('characterName');
+                this.captureFlash = document.getElementById('captureFlash');
+                this.captureCanvas = document.getElementById('captureCanvas');
+                
+                this.selectedCharacter = null;
+                this.stream = null;
+                this.phase = 'loading'; // loading, character, countdown, capture, result
+                
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Get selected character from URL params or localStorage
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const characterName = urlParams.get('character');
+                    
+                    if (characterName) {
+                        await this.loadCharacterData(characterName);
+                    } else {
+                        const savedCharacter = localStorage.getItem('selectedARCharacter');
+                        if (savedCharacter) {
+                            this.selectedCharacter = JSON.parse(savedCharacter);
+                        } else {
+                            throw new Error('No character selected');
+                        }
+                    }
+
+                    await this.setupCamera();
+                    await this.startARSequence();
+                    
+                } catch (error) {
+                    console.error('Initialization error:', error);
+                    this.showError('Gagal memulai AR Camera', error.message);
+                }
+            }
+
+            async loadCharacterData(characterName) {
+                this.updateLoadingProgress('Memuat data karakter...');
+                
+                try {
+                    const response = await fetch('/api/ar/characters');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.selectedCharacter = data.characters.find(c => c.name === characterName);
+                        if (!this.selectedCharacter) {
+                            throw new Error(`Character ${characterName} not found`);
+                        }
+                    } else {
+                        throw new Error('Failed to load characters');
+                    }
+                } catch (error) {
+                    throw new Error(`Failed to load character data: ${error.message}`);
+                }
+            }
+
+            async setupCamera() {
+                this.updateLoadingProgress('Mengakses kamera...');
+                
+                try {
+                    // Request camera with portrait constraints
+                    const constraints = {
+                        video: {
+                            width: { ideal: 480 },
+                            height: { ideal: 854 },
+                            aspectRatio: { ideal: 9/16 }, // Portrait
+                            facingMode: 'user' // Front camera
+                        },
+                        audio: false
+                    };
+
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.videoElement.srcObject = this.stream;
+                    
+                    // Wait for video to be ready
+                    await new Promise((resolve) => {
+                        this.videoElement.onloadedmetadata = resolve;
+                    });
+                    
+                } catch (error) {
+                    throw new Error(`Camera access failed: ${error.message}`);
+                }
+            }
+
+            async startARSequence() {
+                // Hide loading screen and show camera
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('cameraContainer').style.display = 'block';
+                
+                // Phase 1: Show character animation (3 seconds)
+                await this.showCharacterPhase();
+                
+                // Phase 2: Countdown (5 seconds)
+                await this.countdownPhase();
+                
+                // Phase 3: Capture photo
+                await this.capturePhase();
+                
+                // Phase 4: Wait and redirect (5 seconds)
+                await this.resultPhase();
+            }
+
+            async showCharacterPhase() {
+                this.phase = 'character';
+                this.statusOverlay.textContent = `Menampilkan ${this.selectedCharacter.name}`;
+                
+                // Show character info
+                this.characterName.textContent = this.selectedCharacter.name;
+                this.characterInfo.classList.add('visible');
+                
+                // Load and show character webm if available
+                if (this.selectedCharacter.has_animation && this.selectedCharacter.animation_url) {
+                    this.characterOverlay.src = this.selectedCharacter.animation_url;
+                    this.characterOverlay.classList.add('visible');
+                }
+                
+                // Wait for 3 seconds
+                await this.delay(3000);
+            }
+
+            async countdownPhase() {
+                this.phase = 'countdown';
+                this.statusOverlay.textContent = 'Bersiap-siap untuk foto!';
+                this.characterInfo.classList.remove('visible');
+                
+                // Hide character overlay
+                this.characterOverlay.classList.remove('visible');
+                
+                // Start countdown from 5 to 1
+                for (let i = 5; i >= 1; i--) {
+                    this.countdownNumber.textContent = i;
+                    this.countdownOverlay.classList.add('visible');
+                    
+                    // Play countdown sound (optional)
+                    this.playCountdownSound(i);
+                    
+                    await this.delay(1000);
+                    this.countdownOverlay.classList.remove('visible');
+                    await this.delay(100); // Small gap between numbers
+                }
+                
+                // Show "GO!"
+                this.countdownNumber.textContent = 'GO!';
+                this.countdownNumber.style.color = '#4CAF50';
+                this.countdownOverlay.classList.add('visible');
+                await this.delay(500);
+                this.countdownOverlay.classList.remove('visible');
+            }
+
+            async capturePhase() {
+                this.phase = 'capture';
+                this.statusOverlay.textContent = 'Mengambil foto...';
+                
+                // Flash effect
+                this.captureFlash.classList.add('flash');
+                
+                // Capture photo
+                const photoData = this.capturePhoto();
+                
+                // Show success animation
+                const successIcon = document.createElement('div');
+                successIcon.className = 'success-animation';
+                successIcon.textContent = '✓';
+                document.querySelector('.camera-container').appendChild(successIcon);
+                
+                // Process and upload photo
+                await this.processPhoto(photoData);
+                
+                // Cleanup
+                setTimeout(() => {
+                    successIcon.remove();
+                    this.captureFlash.classList.remove('flash');
+                }, 1500);
+            }
+
+            capturePhoto() {
+                const canvas = this.captureCanvas;
+                const video = this.videoElement;
+                
+                // Set canvas size to match portrait 16:9
+                canvas.width = 480;
+                canvas.height = 854;
+                
+                const ctx = canvas.getContext('2d');
+                
+                // Flip horizontally to match what user sees
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+                
+                // Convert to blob
+                return canvas.toDataURL('image/png');
+            }
+
+            async processPhoto(photoData) {
+                try {
+                    // Convert base64 to blob
+                    const response = await fetch(photoData);
+                    const blob = await response.blob();
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('photo', blob, 'ar_capture.png');
+                    formData.append('overlay_name', `${this.selectedCharacter.name}.png`);
+                    
+                    // Get auth token
+                    const token = localStorage.getItem('token');
+                    
+                    // Upload photo
+                    const uploadResponse = await fetch('/api/ar/photo', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+                    
+                    const result = await uploadResponse.json();
+                    
+                    if (result.success) {
+                        // Store result for result page
+                        localStorage.setItem('arPhotoResult', JSON.stringify(result.data));
+                    } else {
+                        throw new Error(result.detail || 'Upload failed');
+                    }
+                    
+                } catch (error) {
+                    console.error('Photo processing error:', error);
+                    this.statusOverlay.textContent = 'Gagal memproses foto';
+                }
+            }
+
+            async resultPhase() {
+                this.phase = 'result';
+                this.statusOverlay.textContent = 'Foto berhasil! Mengalihkan...';
+                
+                // Wait 5 seconds before redirect
+                let countdown = 5;
+                const countdownInterval = setInterval(() => {
+                    this.statusOverlay.textContent = `Mengalihkan dalam ${countdown} detik...`;
+                    countdown--;
+                    
+                    if (countdown < 0) {
+                        clearInterval(countdownInterval);
+                        this.redirectToResult();
+                    }
+                }, 1000);
+            }
+
+            redirectToResult() {
+                // Stop camera stream
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Redirect to result page
+                window.location.href = '/result';
+            }
+
+            playCountdownSound(number) {
+                // Create simple beep sound using Web Audio API
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = number === 1 ? 800 : 400; // Higher pitch for last count
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                } catch (error) {
+                    // Ignore audio errors
+                }
+            }
+
+            updateLoadingProgress(message) {
+                document.getElementById('loadingProgress').textContent = message;
+            }
+
+            showError(title, message) {
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('errorMessage').textContent = message;
+                document.getElementById('errorScreen').style.display = 'flex';
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Global functions
+        function retryCamera() {
+            location.reload();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ARCameraController();
+        });
+
+        // Handle page visibility
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Pause any ongoing processes when tab is hidden
+            }
+        });
+
+        // Handle beforeunload
+        window.addEventListener('beforeunload', () => {
+            // Stop camera stream
+            const video = document.getElementById('videoElement');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

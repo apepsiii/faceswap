@@ -573,3 +573,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Made with ❤️ by the AI Face Swap Studio Team**
 
 *Transform yourself with AI magic! 🎭✨*
+
+
+
+untuk pilihan template photo ar, saya punya statis/ar_assets/thumbnail (thumbnail) dan statis/ar_assets/ (overla webm seakan objek bergerak masuk dan keluar) . kemudian perbaiki pada halaman ar_camera untuk membuat halaman take gambarnya menjadi resolusi potrait 16:9.
+jadi alurnya login -> dashboard -> user pilih karakter dari statis/ar_assets/thumbnail (boy.png, etc di looping dari direktori itu) -> ar_camera (muncul karakter boy.webm kemudian 3 detik berikutnya countdown 5 detik, ambil foto, redirect setelah 5 detik berikutnya ke halaman result)

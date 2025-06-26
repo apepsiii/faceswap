@@ -282,7 +282,7 @@
                     localStorage.setItem('user', JSON.stringify(data.user));
                     
                     // Redirect to character selection
-                    window.location.replace('/character');
+                    window.location.replace('/dashboard');
                 } else {
                     showError(data.detail || data.message || 'Login gagal');
                 }

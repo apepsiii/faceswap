@@ -43,6 +43,11 @@ class Config:
     FRAME_DIR = Path("static/images")
     PAGES_DIR = Path("pages")  # Frontend pages directory
     
+    # AR Photo directories (added for compatibility)
+    AR_ASSETS_DIR = Path("static/ar_assets")
+    COUNTDOWN_DIR = Path("static/ar_assets/countdown")
+    AR_RESULTS_DIR = Path("static/ar_results")
+    
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp'}
     ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'image/bmp'}
@@ -281,10 +286,25 @@ async def lifespan(app: FastAPI):
             download_zip=False
         )
         
-        # Create directories
-        for directory in [Config.UPLOAD_DIR, Config.TEMPLATE_DIR, 
-                         Config.RESULT_DIR, Config.FRAME_DIR, Config.PAGES_DIR]:
+        # Create all directories
+        directories = [
+            Config.UPLOAD_DIR, Config.TEMPLATE_DIR, Config.RESULT_DIR, 
+            Config.FRAME_DIR, Config.PAGES_DIR, Config.AR_ASSETS_DIR, 
+            Config.COUNTDOWN_DIR, Config.AR_RESULTS_DIR
+        ]
+        
+        for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize AR Photo module
+        try:
+            from ar_photo import init_ar_photo
+            init_ar_photo()
+            logger.info("AR Photo module initialized successfully")
+        except ImportError:
+            logger.warning("AR Photo module not found, skipping AR initialization")
+        except Exception as e:
+            logger.error(f"Failed to initialize AR Photo module: {e}")
         
         logger.info("Application startup complete")
         yield
@@ -298,8 +318,8 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Face Swap Studio",
-    description="Advanced Face Swapping API with Authentication",
-    version="2.0.0",
+    description="Advanced Face Swapping API with Authentication and AR Photo",
+    version="2.1.0",
     lifespan=lifespan
 )
 
@@ -524,6 +544,11 @@ async def login_page():
     """Serve login page"""
     return serve_html_page("login")
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page():
+    """Serve main dashboard/menu page"""
+    return serve_html_page("dashboard")
+
 @app.get("/character", response_class=HTMLResponse)
 async def character_page():
     """Serve character selection page"""
@@ -534,6 +559,16 @@ async def camera_page():
     """Serve camera page"""
     return serve_html_page("camera")
 
+@app.get("/ar-character", response_class=HTMLResponse)
+async def ar_character_page():
+    """Serve AR character selection page"""
+    return serve_html_page("ar_character")
+
+@app.get("/ar-camera", response_class=HTMLResponse)
+async def ar_camera_page():
+    """Serve AR camera page"""
+    return serve_html_page("ar_camera")
+
 @app.get("/result", response_class=HTMLResponse)
 async def result_page():
     """Serve result page"""
@@ -541,8 +576,16 @@ async def result_page():
 
 @app.get("/index", response_class=HTMLResponse)
 async def index_page():
-    """Serve index page or redirect to login"""
-    return serve_html_page("index")
+    """Serve index page or redirect to dashboard"""
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html><head><title>AI Face Swap Studio</title>
+    <meta http-equiv="refresh" content="0; url=/dashboard">
+    </head>
+    <body>
+    <p>Redirecting to <a href="/dashboard">Dashboard</a>...</p>
+    </body></html>
+    """)
 
 # ===== API ROUTES =====
 
@@ -555,13 +598,23 @@ async def app_info():
     """Get application information"""
     return {
         "app_name": "AI Face Swap Studio",
-        "version": "2.0.0",
-        "description": "Advanced Face Swapping API with Authentication",
+        "version": "2.1.0",
+        "description": "Advanced Face Swapping API with Authentication and AR Photo",
         "pages": [
             {"path": "/login", "description": "Login page"},
+            {"path": "/dashboard", "description": "Main menu dashboard"},
             {"path": "/character", "description": "Character selection"},
             {"path": "/camera", "description": "Photo capture"},
+            {"path": "/ar-character", "description": "AR Character selection"},
+            {"path": "/ar-camera", "description": "AR Photo capture"},
             {"path": "/result", "description": "Result with QR code"}
+        ],
+        "features": [
+            "Face Swapping",
+            "AR Photo Overlay",
+            "User Authentication",
+            "QR Code Generation",
+            "User Dashboard"
         ],
         "api_docs": "/docs"
     }
@@ -574,6 +627,24 @@ async def register(user_data: UserCreate):
 @app.post("/api/login")
 async def login(login_data: UserLogin):
     return auth_service.login_user(login_data)
+
+@app.post("/api/logout")
+async def logout(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Logout user and invalidate session"""
+    if not credentials:
+        return {"success": True, "message": "Logout berhasil"}
+    
+    try:
+        token = credentials.credentials
+        # You can add token invalidation logic here if needed
+        # For now, we rely on client-side token removal
+        return {
+            "success": True,
+            "message": "Logout berhasil"
+        }
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+        return {"success": True, "message": "Logout berhasil"}
 
 @app.get("/api/me")
 async def get_me(current_user = Depends(get_current_user)):
@@ -799,6 +870,245 @@ async def delete_result(filename: str, current_user = Depends(get_current_user))
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Gagal menghapus file"
         )
+
+# Add this to main.py - Replace the fallback AR endpoints
+
+@app.get("/api/ar/characters")
+async def ar_characters_dynamic():
+    """Dynamic AR characters from directory scan - FIXED VERSION"""
+    try:
+        from pathlib import Path
+        
+        characters = []
+        
+        # Define directories  
+        thumbnail_dir = Path("static/ar_assets/thumbnail")
+        ar_assets_dir = Path("static/ar_assets")
+        
+        # Create directories if they don't exist
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ar_assets_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Scan thumbnail directory for real images
+        if thumbnail_dir.exists():
+            for thumbnail_file in thumbnail_dir.iterdir():
+                if thumbnail_file.is_file() and thumbnail_file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+                    character_name = thumbnail_file.stem
+                    
+                    # Look for corresponding webm/mp4 animation file
+                    animation_file = None
+                    animation_url = None
+                    has_animation = False
+                    
+                    # Check for animation files (prioritize webm for AR)
+                    for ext in ['.webm', '.mp4', '.mov']:
+                        potential_animation = ar_assets_dir / f"{character_name}{ext}"
+                        if potential_animation.exists():
+                            animation_file = potential_animation
+                            animation_url = f"/static/ar_assets/{character_name}{ext}"
+                            has_animation = True
+                            logger.info(f"Found animation for {character_name}: {ext}")
+                            break
+                    
+                    # IMPORTANT: Always prefer webm for AR experience
+                    webm_file = ar_assets_dir / f"{character_name}.webm"
+                    if webm_file.exists():
+                        animation_file = webm_file
+                        animation_url = f"/static/ar_assets/{character_name}.webm"
+                        has_animation = True
+                    
+                    character_data = {
+                        "name": character_name,
+                        "display_name": character_name.replace('_', ' ').title(),
+                        "thumbnail": f"/static/ar_assets/thumbnail/{thumbnail_file.name}",
+                        "has_animation": has_animation,
+                        "animation_url": animation_url,
+                        "webm_url": f"/static/ar_assets/{character_name}.webm" if webm_file.exists() else None,
+                        "thumbnail_path": str(thumbnail_file),
+                        "animation_path": str(animation_file) if animation_file else None,
+                        "type": "photo_ar"  # Not face swap!
+                    }
+                    
+                    characters.append(character_data)
+                    logger.info(f"AR Character found: {character_name} (webm: {webm_file.exists()})")
+        
+        # Check if we have required AR assets
+        webm_characters = [c for c in characters if c['webm_url']]
+        
+        if not characters:
+            return {
+                "success": True,
+                "characters": [],
+                "count": 0,
+                "mode": "EMPTY_DIRECTORY",
+                "message": "No AR characters found. Add thumbnail + webm files.",
+                "instructions": {
+                    "steps": [
+                        "1. Add character thumbnail: static/ar_assets/thumbnail/superhero.png",
+                        "2. Add character animation: static/ar_assets/superhero.webm",
+                        "3. Refresh page to see characters"
+                    ],
+                    "required_files": [
+                        "Thumbnail: .png/.jpg/.jpeg (for display)",
+                        "Animation: .webm (for AR capture)"
+                    ]
+                }
+            }
+        
+        return {
+            "success": True,
+            "characters": characters,
+            "count": len(characters),
+            "webm_count": len(webm_characters),
+            "mode": "DIRECTORY_SCAN", 
+            "message": f"Found {len(characters)} AR characters ({len(webm_characters)} with WebM animations)"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error scanning AR characters: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "characters": [],
+            "count": 0
+        }
+
+@app.post("/api/ar/upload-character")
+async def upload_character(
+    name: str = Form(...),
+    thumbnail: UploadFile = File(...),
+    animation: Optional[UploadFile] = File(None),
+    current_user = Depends(get_current_user)
+):
+    """Upload character thumbnail and animation"""
+    try:
+        from pathlib import Path
+        import aiofiles
+        
+        # Validate inputs
+        if not name or not name.strip():
+            raise HTTPException(status_code=400, detail="Character name is required")
+        
+        # Sanitize character name
+        import re
+        safe_name = re.sub(r'[^\w\-_]', '', name.strip().lower())
+        if not safe_name:
+            raise HTTPException(status_code=400, detail="Invalid character name")
+        
+        # Create directories
+        thumbnail_dir = Path("static/ar_assets/thumbnail")
+        ar_assets_dir = Path("static/ar_assets")
+        thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        ar_assets_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Validate thumbnail
+        if not thumbnail.filename:
+            raise HTTPException(status_code=400, detail="Thumbnail file is required")
+        
+        thumbnail_ext = Path(thumbnail.filename).suffix.lower()
+        if thumbnail_ext not in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+            raise HTTPException(status_code=400, detail="Invalid thumbnail format")
+        
+        # Save thumbnail
+        thumbnail_filename = f"{safe_name}{thumbnail_ext}"
+        thumbnail_path = thumbnail_dir / thumbnail_filename
+        
+        async with aiofiles.open(thumbnail_path, 'wb') as f:
+            content = await thumbnail.read()
+            await f.write(content)
+        
+        # Save animation if provided
+        animation_path = None
+        if animation and animation.filename:
+            animation_ext = Path(animation.filename).suffix.lower()
+            if animation_ext not in ['.webm', '.mp4', '.mov']:
+                raise HTTPException(status_code=400, detail="Invalid animation format")
+            
+            animation_filename = f"{safe_name}{animation_ext}"
+            animation_path = ar_assets_dir / animation_filename
+            
+            async with aiofiles.open(animation_path, 'wb') as f:
+                content = await animation.read()
+                await f.write(content)
+        
+        logger.info(f"Character uploaded: {safe_name}")
+        
+        return {
+            "success": True,
+            "message": f"Character '{safe_name}' uploaded successfully",
+            "character": {
+                "name": safe_name,
+                "thumbnail": f"/static/ar_assets/thumbnail/{thumbnail_filename}",
+                "has_animation": animation_path is not None,
+                "animation_url": f"/static/ar_assets/{animation_path.name}" if animation_path else None
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Error uploading character: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@app.delete("/api/ar/characters/{character_name}")
+async def delete_character(character_name: str, current_user = Depends(get_current_user)):
+    """Delete character files"""
+    try:
+        from pathlib import Path
+        import re
+        
+        # Sanitize name
+        safe_name = re.sub(r'[^\w\-_]', '', character_name.strip().lower())
+        if not safe_name:
+            raise HTTPException(status_code=400, detail="Invalid character name")
+        
+        thumbnail_dir = Path("static/ar_assets/thumbnail")
+        ar_assets_dir = Path("static/ar_assets")
+        
+        deleted_files = []
+        
+        # Delete thumbnail
+        for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+            thumbnail_path = thumbnail_dir / f"{safe_name}{ext}"
+            if thumbnail_path.exists():
+                thumbnail_path.unlink()
+                deleted_files.append(str(thumbnail_path))
+        
+        # Delete animation
+        for ext in ['.webm', '.mp4', '.mov']:
+            animation_path = ar_assets_dir / f"{safe_name}{ext}"
+            if animation_path.exists():
+                animation_path.unlink()
+                deleted_files.append(str(animation_path))
+        
+        if not deleted_files:
+            raise HTTPException(status_code=404, detail="Character not found")
+        
+        logger.info(f"Character deleted: {safe_name}")
+        
+        return {
+            "success": True,
+            "message": f"Character '{safe_name}' deleted successfully",
+            "deleted_files": deleted_files
+        }
+    
+    except Exception as e:
+        logger.error(f"Error deleting character: {e}")
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+@app.get("/api/ar/test")  
+async def ar_test_dynamic():
+    """Test AR endpoints"""
+    return {
+        "success": True,
+        "message": "AR endpoints working (dynamic directory scan)",
+        "mode": "DYNAMIC",
+        "endpoints": [
+            "/api/ar/characters - List characters from directory",
+            "/api/ar/scan - Debug directory contents", 
+            "/api/ar/upload-character - Upload new character",
+            "/api/ar/characters/{name} - Delete character",
+            "/api/ar/test - This endpoint"
+        ]
+    }
 
 if __name__ == "__main__":
     import uvicorn

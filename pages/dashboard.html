@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Face Swap Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info span {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .welcome-section {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        .welcome-section h2 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .welcome-section p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .main-menu {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .menu-card {
+            background: white;
+            border-radius: 25px;
+            padding: 40px 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            min-width: 320px;
+            max-width: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .menu-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .menu-card:hover::before {
+            left: 100%;
+        }
+
+        .menu-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .faceswap-card {
+            border-top: 5px solid #ff6b6b;
+        }
+
+        .faceswap-card .menu-icon {
+            color: #ff6b6b;
+        }
+
+        .ar-photo-card {
+            border-top: 5px solid #4ecdc4;
+        }
+
+        .ar-photo-card .menu-icon {
+            color: #4ecdc4;
+        }
+
+        .menu-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .menu-card p {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .menu-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 25px;
+        }
+
+        .menu-features li {
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .menu-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .menu-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .menu-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats-section {
+            margin-top: 60px;
+            text-align: center;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            margin: 20px auto 0;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            padding-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-menu {
+                flex-direction: column;
+                align-items: center;
+                gap: 30px;
+            }
+
+            .menu-card {
+                min-width: 280px;
+                padding: 30px 20px;
+            }
+
+            .welcome-section h2 {
+                font-size: 1.5rem;
+            }
+
+            .welcome-section p {
+                font-size: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: white;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #4CAF50;
+        }
+
+        .notification.error {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎭 AI Face Swap Studio</h1>
+        <div class="user-info">
+            <span>👋 Selamat datang, <strong id="username">User</strong></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="welcome-section">
+        <h2>Pilih Fitur Yang Ingin Anda Gunakan</h2>
+        <p>Eksplorasi fitur-fitur canggih AI untuk mengubah wajah dan menciptakan foto AR yang menakjubkan</p>
+    </div>
+
+    <div class="main-menu">
+        <!-- Face Swap Card -->
+        <div class="menu-card faceswap-card" onclick="goToFaceSwap()">
+            <span class="menu-icon">🔄</span>
+            <h3>Face Swap</h3>
+            <p>Tukar wajah Anda dengan karakter favorit menggunakan teknologi AI terdepan</p>
+            <ul class="menu-features">
+                <li>Pilihan template karakter beragam</li>
+                <li>Hasil berkualitas tinggi</li>
+                <li>Proses cepat dan mudah</li>
+                <li>Teknologi AI terbaru</li>
+            </ul>
+            <button class="menu-btn">Mulai Face Swap</button>
+        </div>
+
+        <!-- AR Photo Card -->
+        <div class="menu-card ar-photo-card" onclick="goToARPhoto()">
+            <span class="menu-icon">📸</span>
+            <h3>AR Photo</h3>
+            <p>Ambil foto dengan efek Augmented Reality dan overlay keren yang interaktif</p>
+            <ul class="menu-features">
+                <li>Countdown video otomatis</li>
+                <li>Overlay AR real-time</li>
+                <li>Auto capture berkualitas</li>
+                <li>QR code untuk download</li>
+            </ul>
+            <button class="menu-btn">Mulai AR Photo</button>
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <h3>Statistik Penggunaan</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalFaceSwaps">0</div>
+                <div class="stat-label">Total Face Swaps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalARPhotos">0</div>
+                <div class="stat-label">Total AR Photos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="memberSince">-</div>
+                <div class="stat-label">Member Since</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastActivity">-</div>
+                <div class="stat-label">Last Activity</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 AI Face Swap Studio. All rights reserved.</p>
+        <p>Powered by Advanced AI Technology</p>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        class Dashboard {
+            constructor() {
+                this.token = localStorage.getItem('token');
+                this.user = null;
+                this.init();
+            }
+
+            async init() {
+                if (!this.checkAuth()) return;
+                
+                await this.loadUserData();
+                await this.loadUserStats();
+            }
+
+            checkAuth() {
+                if (!this.token) {
+                    this.showNotification('error', 'Silakan login terlebih dahulu');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                    return false;
+                }
+                return true;
+            }
+
+            async loadUserData() {
+                try {
+                    const response = await fetch('/api/me', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.user = data.user;
+                        document.getElementById('username').textContent = this.user.username;
+                        
+                        // Update member since
+                        if (this.user.created_at) {
+                            const memberDate = new Date(this.user.created_at);
+                            document.getElementById('memberSince').textContent = 
+                                memberDate.toLocaleDateString('id-ID', { 
+                                    month: 'short', 
+                                    year: 'numeric' 
+                                });
+                        }
+
+                        // Update last activity
+                        if (this.user.last_login) {
+                            const lastLogin = new Date(this.user.last_login);
+                            const now = new Date();
+                            const diffDays = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays === 0) {
+                                document.getElementById('lastActivity').textContent = 'Hari ini';
+                            } else if (diffDays === 1) {
+                                document.getElementById('lastActivity').textContent = 'Kemarin';
+                            } else {
+                                document.getElementById('lastActivity').textContent = `${diffDays} hari lalu`;
+                            }
+                        }
+
+                    } else {
+                        throw new Error('Failed to load user data');
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                    this.showNotification('error', 'Gagal memuat data user');
+                }
+            }
+
+            async loadUserStats() {
+                try {
+                    const response = await fetch('/api/history', {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const history = data.history || [];
+                        
+                        // Count face swaps vs AR photos
+                        let faceSwapCount = 0;
+                        let arPhotoCount = 0;
+                        
+                        history.forEach(item => {
+                            if (item.template_name && item.template_name.startsWith('AR_OVERLAY_')) {
+                                arPhotoCount++;
+                            } else {
+                                faceSwapCount++;
+                            }
+                        });
+
+                        document.getElementById('totalFaceSwaps').textContent = faceSwapCount;
+                        document.getElementById('totalARPhotos').textContent = arPhotoCount;
+
+                    } else {
+                        console.log('No history data available');
+                    }
+                } catch (error) {
+                    console.error('Error loading user stats:', error);
+                }
+            }
+
+            showNotification(type, message) {
+                const notification = document.getElementById('notification');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                notification.classList.add('show');
+
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            showLoading() {
+                document.getElementById('loading').style.display = 'block';
+            }
+
+            hideLoading() {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            new Dashboard();
+        });
+
+        // Navigation functions
+        function goToFaceSwap() {
+            const dashboard = window.dashboard;
+            if (dashboard) dashboard.showLoading();
+            
+            // Add small delay for better UX
+            setTimeout(() => {
+                window.location.href = '/character';
+            }, 300);
+        }
+
+        function goToARPhoto() {
+            const dashboard = window.dashboard;
+            if (dashboard) dashboard.showLoading();
+            
+            // Add small delay for better UX
+            setTimeout(() => {
+                window.location.href = '/ar-character';
+            }, 300);
+        }
+
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (token) {
+                    // Call logout API if available
+                    try {
+                        await fetch('/api/logout', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                    } catch (error) {
+                        console.log('Logout API not available, proceeding with local logout');
+                    }
+                }
+
+                // Clear local storage
+                localStorage.removeItem('token');
+                
+                // Show success message
+                const notification = document.getElementById('notification');
+                notification.className = 'notification success';
+                notification.textContent = 'Logout berhasil!';
+                notification.classList.add('show');
+
+                // Redirect to login
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1000);
+
+            } catch (error) {
+                console.error('Logout error:', error);
+                
+                // Force logout even if API fails
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        goToFaceSwap();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        goToARPhoto();
+                        break;
+                }
+            }
+        });
+
+        // Add some interactive animations
+        document.querySelectorAll('.menu-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

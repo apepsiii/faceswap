@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilih Karakter AR - AI Face Swap Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .title-section {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .title-section h2 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .title-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .characters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .character-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .character-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .character-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .character-card:hover::before {
+            left: 100%;
+        }
+
+        .character-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            border: 4px solid #f0f0f0;
+            transition: all 0.3s ease;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .character-card:hover .character-image {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .character-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            text-transform: capitalize;
+        }
+
+        .character-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .animation-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: white;
+            margin: 40px 0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-characters {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+        }
+
+        .no-characters h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .no-characters p {
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        .upload-suggestion {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px auto;
+            text-align: center;
+            display: none;
+            max-width: 600px;
+        }
+
+        .retry-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 15px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .retry-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Default avatar styling */
+        .character-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #999;
+            border: 4px solid #f0f0f0;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .title-section h2 {
+                font-size: 1.8rem;
+            }
+
+            .characters-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                padding: 0 10px;
+            }
+
+            .character-card {
+                padding: 15px;
+            }
+
+            .character-image, .character-placeholder {
+                width: 80px;
+                height: 80px;
+            }
+
+            .character-name {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .characters-grid {
+                grid-template-columns: 1fr;
+                max-width: 300px;
+            }
+        }
+
+        /* Preview Modal */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        .preview-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 5px solid #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .debug-info {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎭 AR Photo Studio</h1>
+        <a href="/dashboard" class="back-btn">
+            ← Kembali ke Dashboard
+        </a>
+    </div>
+
+    <div class="title-section">
+        <h2>Pilih Karakter AR</h2>
+        <p>Pilih karakter yang akan muncul dalam foto AR Anda</p>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Memuat karakter AR...</p>
+    </div>
+
+    <div id="error" class="error-message">
+        <p id="errorText"></p>
+        <button class="retry-btn" onclick="arSelector.loadCharacters()">🔄 Coba Lagi</button>
+    </div>
+
+    <div id="debugInfo" class="debug-info"></div>
+
+    <div id="charactersGrid" class="characters-grid">
+        <!-- Characters will be loaded here -->
+    </div>
+
+    <div id="noCharacters" class="no-characters" style="display: none;">
+        <h3>😔 Karakter AR Tidak Ditemukan</h3>
+        <p>Belum ada karakter AR yang tersedia saat ini.</p>
+        <div class="upload-suggestion">
+            <p><strong>💡 Solusi:</strong></p>
+            <p>1. Pastikan server berjalan dengan benar</p>
+            <p>2. Cek folder: <code>static/ar_assets/thumbnail/</code></p>
+            <p>3. Atau gunakan karakter default yang tersedia</p>
+            <button class="retry-btn" onclick="arSelector.createDefaultCharacters()">
+                🎭 Buat Karakter Default
+            </button>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="preview-modal">
+        <div class="preview-content">
+            <img id="previewImage" class="preview-image" src="" alt="Character Preview">
+            <h3 id="previewName" class="character-name"></h3>
+            <p id="previewDescription">Karakter ini akan muncul dengan animasi saat Anda mengambil foto AR.</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closePreview()">Batal</button>
+                <button class="btn btn-primary" onclick="selectCharacter()">Pilih Karakter</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ARCharacterSelector {
+            constructor() {
+                this.characters = [];
+                this.selectedCharacter = null;
+                this.isDebugMode = window.location.search.includes('debug=true');
+                this.init();
+            }
+
+            async init() {
+                if (this.isDebugMode) {
+                    document.getElementById('debugInfo').style.display = 'block';
+                    this.log('🐛 Debug mode enabled');
+                }
+                await this.loadCharacters();
+            }
+
+            log(message) {
+                console.log(message);
+                if (this.isDebugMode) {
+                    const debugDiv = document.getElementById('debugInfo');
+                    debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+                }
+            }
+
+            async loadCharacters() {
+                const loading = document.getElementById('loading');
+                const error = document.getElementById('error');
+                const grid = document.getElementById('charactersGrid');
+                const noCharacters = document.getElementById('noCharacters');
+
+                // Reset UI
+                loading.style.display = 'block';
+                error.style.display = 'none';
+                noCharacters.style.display = 'none';
+                grid.innerHTML = '';
+
+                this.log('🔄 Loading characters from API...');
+
+                try {
+                    const response = await fetch('/api/ar/characters', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    this.log(`📡 API Response: ${response.status} ${response.statusText}`);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    this.log(`📦 Data received: ${JSON.stringify(data, null, 2)}`);
+
+                    if (data.success && data.characters && data.characters.length > 0) {
+                        this.characters = data.characters;
+                        this.log(`✅ Loaded ${this.characters.length} characters`);
+                        this.renderCharacters();
+                    } else {
+                        this.log('⚠️ No characters found in response');
+                        this.showNoCharacters();
+                    }
+
+                } catch (err) {
+                    this.log(`❌ Error: ${err.message}`);
+                    console.error('Error loading characters:', err);
+                    this.showError(`Gagal memuat karakter AR: ${err.message}`);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }
+
+            showError(message) {
+                const error = document.getElementById('error');
+                const errorText = document.getElementById('errorText');
+                errorText.textContent = message;
+                error.style.display = 'block';
+            }
+
+            showNoCharacters() {
+                document.getElementById('noCharacters').style.display = 'block';
+            }
+
+            createDefaultCharacters() {
+                this.log('🎭 Creating default characters...');
+                
+                // Create default characters with emojis as placeholders
+                this.characters = [
+                    {
+                        name: 'superhero',
+                        thumbnail: 'data:image/svg+xml;base64,' + btoa(`
+                            <svg width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="60" cy="60" r="50" fill="#667eea"/>
+                                <text x="60" y="75" text-anchor="middle" font-size="40" fill="white">🦸</text>
+                            </svg>
+                        `),
+                        has_animation: true,
+                        animation_url: '/static/ar_assets/superhero.webm'
+                    },
+                    {
+                        name: 'princess',
+                        thumbnail: 'data:image/svg+xml;base64,' + btoa(`
+                            <svg width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="60" cy="60" r="50" fill="#ff69b4"/>
+                                <text x="60" y="75" text-anchor="middle" font-size="40" fill="white">👸</text>
+                            </svg>
+                        `),
+                        has_animation: true,
+                        animation_url: '/static/ar_assets/princess.webm'
+                    },
+                    {
+                        name: 'robot',
+                        thumbnail: 'data:image/svg+xml;base64,' + btoa(`
+                            <svg width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="60" cy="60" r="50" fill="#4CAF50"/>
+                                <text x="60" y="75" text-anchor="middle" font-size="40" fill="white">🤖</text>
+                            </svg>
+                        `),
+                        has_animation: true,
+                        animation_url: '/static/ar_assets/robot.webm'
+                    }
+                ];
+
+                document.getElementById('noCharacters').style.display = 'none';
+                this.renderCharacters();
+                this.log('✅ Default characters created');
+            }
+
+            renderCharacters() {
+                const grid = document.getElementById('charactersGrid');
+                
+                if (!this.characters || this.characters.length === 0) {
+                    this.showNoCharacters();
+                    return;
+                }
+
+                grid.innerHTML = this.characters.map(character => `
+                    <div class="character-card" onclick="arSelector.showPreview('${character.name}')">
+                        ${character.has_animation ? '<div class="animation-indicator">🎬</div>' : ''}
+                        ${this.renderCharacterImage(character)}
+                        <div class="character-name">${character.name}</div>
+                        <div class="character-badge">
+                            ${character.has_animation ? 'Animasi AR' : 'Gambar Statis'}
+                        </div>
+                    </div>
+                `).join('');
+
+                this.log(`🎨 Rendered ${this.characters.length} character cards`);
+            }
+
+            renderCharacterImage(character) {
+                if (character.thumbnail && !character.thumbnail.includes('undefined')) {
+                    return `<img class="character-image" 
+                             src="${character.thumbnail}" 
+                             alt="${character.name}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="character-placeholder" style="display:none;">
+                                ${this.getCharacterEmoji(character.name)}
+                            </div>`;
+                } else {
+                    return `<div class="character-placeholder">
+                                ${this.getCharacterEmoji(character.name)}
+                            </div>`;
+                }
+            }
+
+            getCharacterEmoji(name) {
+                const emojiMap = {
+                    'superhero': '🦸',
+                    'princess': '👸',
+                    'robot': '🤖',
+                    'boy': '👦',
+                    'girl': '👧',
+                    'warrior': '⚔️',
+                    'wizard': '🧙',
+                    'default': '🎭'
+                };
+                return emojiMap[name.toLowerCase()] || emojiMap['default'];
+            }
+
+            showPreview(characterName) {
+                const character = this.characters.find(c => c.name === characterName);
+                if (!character) {
+                    this.log(`❌ Character not found: ${characterName}`);
+                    return;
+                }
+
+                this.selectedCharacter = character;
+                this.log(`👁️ Previewing character: ${characterName}`);
+
+                document.getElementById('previewImage').src = character.thumbnail;
+                document.getElementById('previewName').textContent = character.name;
+                document.getElementById('previewModal').style.display = 'flex';
+            }
+
+            closePreview() {
+                document.getElementById('previewModal').style.display = 'none';
+                this.selectedCharacter = null;
+                this.log('❌ Preview closed');
+            }
+
+            selectCharacter() {
+                if (!this.selectedCharacter) {
+                    this.log('❌ No character selected');
+                    return;
+                }
+
+                this.log(`✅ Character selected: ${this.selectedCharacter.name}`);
+
+                // Store selected character in localStorage
+                localStorage.setItem('selectedARCharacter', JSON.stringify(this.selectedCharacter));
+
+                // Show loading
+                const modal = document.getElementById('previewModal');
+                modal.innerHTML = `
+                    <div class="preview-content">
+                        <div class="spinner"></div>
+                        <h3>Mempersiapkan AR Camera...</h3>
+                        <p>Mengalihkan ke kamera AR dengan karakter ${this.selectedCharacter.name}</p>
+                    </div>
+                `;
+
+                // Redirect to AR camera with character parameter
+                setTimeout(() => {
+                    const targetUrl = `/ar-camera?character=${encodeURIComponent(this.selectedCharacter.name)}`;
+                    this.log(`🚀 Redirecting to: ${targetUrl}`);
+                    window.location.href = targetUrl;
+                }, 1500);
+            }
+        }
+
+        // Global functions
+        window.showPreview = (characterName) => arSelector.showPreview(characterName);
+        window.closePreview = () => arSelector.closePreview();
+        window.selectCharacter = () => arSelector.selectCharacter();
+
+        // Initialize when page loads
+        let arSelector;
+        document.addEventListener('DOMContentLoaded', () => {
+            arSelector = new ARCharacterSelector();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePreview();
+            }
+        });
+
+        // Handle back button
+        window.addEventListener('beforeunload', () => {
+            // Clear any temporary data
+            localStorage.removeItem('tempARData');
+        });
+
+        // Error handling for uncaught errors
+        window.addEventListener('error', (e) => {
+            console.error('Uncaught error:', e.error);
+            if (arSelector && arSelector.isDebugMode) {
+                arSelector.log(`💥 Uncaught error: ${e.error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

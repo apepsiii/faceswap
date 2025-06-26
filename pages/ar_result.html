@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Photo Studio - Ambil Foto AR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .camera-container {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ar-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .character-animation {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .capture-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: white;
+            border: 5px solid #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .capture-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+
+        .character-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            z-index: 100;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 1000;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .photo-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f44336;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎭 AR Photo Studio</h1>
+        <a href="/ar-character" class="back-btn">← Pilih Karakter Lain</a>
+    </div>
+
+    <div class="camera-container">
+        <video id="videoElement" autoplay muted playsinline></video>
+        
+        <div class="ar-overlay">
+            <video id="characterAnimation" class="character-animation" loop muted playsinline style="display: none;">
+            </video>
+            <img id="characterStatic" class="character-animation" style="display: none;">
+        </div>
+
+        <div class="character-info">
+            <div id="characterName">Loading character...</div>
+            <div><small>📹 AR Photo Mode</small></div>
+        </div>
+
+        <div class="controls">
+            <button class="capture-btn" id="captureBtn" onclick="arPhoto.capturePhoto()">
+                📸
+            </button>
+        </div>
+
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <h3>Setting up AR Camera...</h3>
+            <p id="loadingMessage">Initializing camera and character...</p>
+        </div>
+    </div>
+
+    <!-- Photo Preview Modal -->
+    <div class="photo-preview" id="photoPreview">
+        <div class="preview-content">
+            <img id="capturedImage" class="preview-image" src="">
+            <h3>📸 AR Photo Captured!</h3>
+            <div class="preview-actions">
+                <button class="btn btn-secondary" onclick="arPhoto.retakePhoto()">🔄 Foto Ulang</button>
+                <button class="btn btn-primary" onclick="arPhoto.savePhoto()">💾 Simpan Foto</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="error-message" id="errorMessage" style="display: none;"></div>
+
+    <script>
+        class ARPhotoStudio {
+            constructor() {
+                this.selectedCharacter = null;
+                this.stream = null;
+                this.canvas = null;
+                this.capturedImageData = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Load selected character
+                    this.loadSelectedCharacter();
+                    
+                    // Setup camera
+                    await this.setupCamera();
+                    
+                    // Setup character overlay
+                    this.setupCharacterOverlay();
+                    
+                    // Hide loading
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    
+                } catch (error) {
+                    this.showError(`Setup failed: ${error.message}`);
+                }
+            }
+
+            loadSelectedCharacter() {
+                const stored = localStorage.getItem('selectedARCharacter');
+                if (!stored) {
+                    this.showError('No character selected. Redirecting...');
+                    setTimeout(() => window.location.href = '/ar-character', 2000);
+                    return;
+                }
+
+                this.selectedCharacter = JSON.parse(stored);
+                document.getElementById('characterName').textContent = 
+                    this.selectedCharacter.display_name || this.selectedCharacter.name;
+                
+                console.log('Loaded AR character:', this.selectedCharacter);
+            }
+
+            async setupCamera() {
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: 1280, 
+                            height: 720,
+                            facingMode: 'user' // Front camera
+                        },
+                        audio: false
+                    });
+                    
+                    const video = document.getElementById('videoElement');
+                    video.srcObject = this.stream;
+                    
+                    console.log('✅ Camera setup successful');
+                } catch (error) {
+                    throw new Error(`Camera access failed: ${error.message}`);
+                }
+            }
+
+            setupCharacterOverlay() {
+                if (!this.selectedCharacter) return;
+
+                if (this.selectedCharacter.has_animation && this.selectedCharacter.webm_url) {
+                    // Use WebM animation for AR
+                    const video = document.getElementById('characterAnimation');
+                    video.src = this.selectedCharacter.webm_url;
+                    video.style.display = 'block';
+                    video.play().catch(e => console.warn('Animation autoplay failed:', e));
+                    console.log('✅ AR animation loaded:', this.selectedCharacter.webm_url);
+                } else {
+                    // Use static thumbnail
+                    const img = document.getElementById('characterStatic');
+                    img.src = this.selectedCharacter.thumbnail;
+                    img.style.display = 'block';
+                    console.log('✅ Static character loaded:', this.selectedCharacter.thumbnail);
+                }
+            }
+
+            capturePhoto() {
+                try {
+                    const video = document.getElementById('videoElement');
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Set canvas size to video size
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    // Draw video frame
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Draw character overlay (center position)
+                    const overlaySize = 200;
+                    const x = (canvas.width - overlaySize) / 2;
+                    const y = (canvas.height - overlaySize) / 2;
+
+                    if (this.selectedCharacter.has_animation) {
+                        const charVideo = document.getElementById('characterAnimation');
+                        if (charVideo.style.display !== 'none') {
+                            ctx.drawImage(charVideo, x, y, overlaySize, overlaySize);
+                        }
+                    } else {
+                        const charImg = document.getElementById('characterStatic');
+                        if (charImg.complete) {
+                            ctx.drawImage(charImg, x, y, overlaySize, overlaySize);
+                        }
+                    }
+
+                    // Convert to image
+                    this.capturedImageData = canvas.toDataURL('image/png');
+                    
+                    // Show preview
+                    document.getElementById('capturedImage').src = this.capturedImageData;
+                    document.getElementById('photoPreview').style.display = 'flex';
+
+                    console.log('📸 AR Photo captured successfully');
+                } catch (error) {
+                    this.showError(`Capture failed: ${error.message}`);
+                }
+            }
+
+            retakePhoto() {
+                document.getElementById('photoPreview').style.display = 'none';
+                this.capturedImageData = null;
+            }
+
+            async savePhoto() {
+                if (!this.capturedImageData) {
+                    this.showError('No photo to save');
+                    return;
+                }
+
+                try {
+                    // Convert data URL to blob
+                    const response = await fetch(this.capturedImageData);
+                    const blob = await response.blob();
+
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('photo', blob, 'ar_photo.png');
+                    formData.append('character_name', this.selectedCharacter.name);
+                    formData.append('photo_type', 'ar_photo');
+
+                    // Upload to server
+                    const uploadResponse = await fetch('/api/ar/save-photo', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await uploadResponse.json();
+
+                    if (result.success) {
+                        alert('✅ AR Photo saved successfully!');
+                        
+                        // Redirect to gallery or dashboard
+                        window.location.href = '/dashboard?tab=ar_photos';
+                    } else {
+                        throw new Error(result.message || 'Save failed');
+                    }
+
+                } catch (error) {
+                    this.showError(`Save failed: ${error.message}`);
+                }
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+                
+                console.error('❌ AR Photo Error:', message);
+            }
+
+            cleanup() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+            }
+        }
+
+        // Initialize AR Photo Studio
+        let arPhoto;
+        document.addEventListener('DOMContentLoaded', () => {
+            arPhoto = new ARPhotoStudio();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (arPhoto) arPhoto.cleanup();
+        });
+    </script>
+</body>
+</html>
